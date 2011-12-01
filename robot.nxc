@@ -1,0 +1,351 @@
+#define Compas_Port IN_3
+
+#define Ultrasonic_Port IN_4
+
+#define Left_Motor OUT_A
+
+#define Right_Motor OUT_C
+
+#define Both_Motor OUT_AC
+
+#define Pi 3.14
+
+
+
+/* Some declarations */
+
+sub computePosition();
+
+sub goAngle(int angle);
+
+task display();
+
+task main();
+
+int getDistance();
+
+int getAngle();
+
+void setup();
+
+int distance(int source, int target);
+
+
+
+/* Global estimated position on the playground */
+
+int x_pos;
+
+int y_pos;
+
+
+
+/* Angle at the beginning */
+
+int start_angle;
+
+
+
+sub goPosition(int x, int y)
+
+{
+
+ goAngle((Pi+atan((y - y_pos)/(x - x_pos)))*360/(2*Pi));
+
+ RotateMotorEx(Both_Motor, 60, 10*360, 0, true, true);
+
+}
+
+
+
+/* Find the distance in degrees if we turn right */
+
+// TODO Check that is true...
+
+int distance(int source, int target)
+
+{
+
+     if(target < source)
+
+         return abs(source - 360) + target;
+
+     else
+
+         return abs(target - source);
+
+}
+
+
+
+/* Go to the asked angle */
+
+// TODO choose the good direction using turnRight
+
+sub goAngle(int angle)
+
+{
+
+  while(abs(getAngle() - angle) > 8)
+
+  {
+
+   if(distance(getAngle(), angle) < 180)
+
+   {
+
+       /* Turn Right */
+
+       OnRev(Right_Motor, 60);
+
+       OnFwd(Left_Motor, 60);
+
+   }
+
+   else
+
+   {
+
+       /* Turn Left */
+
+       OnRev(Left_Motor, 60);
+
+       OnFwd(Right_Motor, 60);
+
+   }
+
+  }
+
+  Off(Both_Motor);
+
+}
+
+
+
+sub sort(int &a[], int length)
+
+{
+
+  int i;
+
+  for (i=0; i< length; i++)
+
+  {
+
+    int j, v = a[i];
+
+    for (j = i-1; j>=0; j--)
+
+    {
+
+        if (a[j] <= v) break;
+
+        a[j+1] = a[j];
+
+    }
+
+    a[j+1] = v;
+
+  }
+
+}
+
+
+
+int median(int a[], int length)
+
+{
+
+    sort(a, length);
+
+    if ( a & 1 == 1) {
+
+      return a[length/2];
+
+    }
+
+    int t = (a[(length-1)/2] + a[length/2])/2;
+
+
+
+    return t;
+
+}
+
+
+
+
+
+/* Computing the position by masuring the distance to the border */
+
+sub computePosition()
+
+{
+
+ int i;
+
+ int measures[4];
+
+ 
+
+ /* Fetching the measures */
+
+ for(i = 0 ; i < 4 ; i++)
+
+ {
+
+    goAngle(90*i);
+
+    Wait(500);
+
+    measures[i] = getDistance();
+
+ }
+
+ 
+
+ /* Computing */
+
+ // TODO check if the measures are possible and do something if not
+
+ x_pos = measures[2];
+
+ y_pos = measures[3];
+
+}
+
+
+
+// TODO average or median
+
+int getDistance()
+
+{
+
+  int buffer[8];
+
+  int i;
+
+  for(i = 0 ; i < 4 ; i++)
+
+  {
+
+   buffer[i] = SensorUS(Ultrasonic_Port);
+
+  }
+
+  return median(buffer, 4);
+
+}
+
+
+
+/* Return the relative angle to the start en degrees between 0 and 360 */
+
+// TODO average or median if not reliable
+
+int getAngle()
+
+{
+
+  int angle = (SensorHTCompass(Compas_Port) - start_angle) % 360;
+
+  if (angle < 0)
+
+     return (360 + angle);
+
+  else
+
+     return angle;
+
+}
+
+
+
+/* Setting up ports */
+
+void setup()
+
+{
+
+ /* Setting up Compas */
+
+ SetSensorLowspeed(Compas_Port);
+
+ start_angle = SensorHTCompass(Compas_Port);
+
+
+
+ /* Setting up Distance Sensor */
+
+ SetSensorLowspeed(Ultrasonic_Port);
+
+}
+
+
+
+/* Fancy Stuff */
+
+task display()
+
+{
+
+ Follows(main);
+
+
+
+ while(1){
+
+  ClearScreen();
+
+  int angle = getAngle();
+
+  int distance = getDistance();
+
+  string text;
+
+  sprintf(text, "Distance : %d", getDistance())
+
+  TextOut(0, 10, text);
+
+  sprintf(text, "Angle : %d", getAngle())
+
+  TextOut(0, 0, text);
+
+  sprintf(text, "X : %d", x_pos);
+
+  TextOut(0, 20, text);
+
+  sprintf(text, "Y : %d", y_pos);
+
+  TextOut(50, 20, text);
+
+  Wait(200);
+
+ }
+
+}
+
+
+
+task main()
+
+{
+
+  setup();
+
+  //getDistance();
+
+  //Wait(50000);
+
+  //goAngle(90);
+
+  computePosition();
+
+  //computePosition();
+
+  //computePosition();
+
+  goPosition(150, 10);
+
+}

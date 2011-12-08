@@ -1,0 +1,64 @@
+// -*- coding: utf-8 -*-
+// Exemple NXC: Hello
+// In the latest versions of nbc this line is implicit
+#include "NXCDefs.h" 
+
+#define PINCE OUT_B
+#define COLOR IN_2
+#define ANGLE_DIVISOR 5
+#define TIME_BETWEEN_MEASURES 50
+#define CONSECUTIVE_MEASURES 6
+
+
+sub waitForBall();
+sub foundBall();
+sub throwBall();
+
+sub init() {
+  SetSensorColorFull(COLOR);
+}
+
+int isBall() {
+  return Sensor(COLOR) == 2;
+}
+
+sub waitForBall() {
+  int n = 0;
+
+  OnFwd(PINCE, 100);
+
+  while (n < CONSECUTIVE_MEASURES) {
+    if (isBall()) {
+      n++;
+    }
+    else {
+      n = 0;
+    }
+    
+    Wait(TIME_BETWEEN_MEASURES);
+  }
+
+  Off(PINCE);
+
+  foundBall();
+}
+
+sub foundBall() {
+  PlayToneEx(262,400,3,FALSE);  Wait(500);
+  PlayToneEx(294,400,3,FALSE);  Wait(500);
+  PlayToneEx(330,400,3,FALSE);  Wait(500);
+  PlayToneEx(294,400,3,FALSE);  Wait(500);
+  PlayToneEx(262,1600,3,FALSE); Wait(2000);
+
+  Wait(5000);
+  throwBall();
+}
+
+sub throwBall() {
+  RotateMotor(PINCE, 100, 100 * ANGLE_DIVISOR);
+}
+
+task main() {
+  init();
+  waitForBall();
+}
